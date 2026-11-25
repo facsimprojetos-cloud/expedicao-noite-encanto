@@ -13,6 +13,7 @@ export const ctx = { email: '', nome: '', perfil: '', exp: null };
 const ROTAS = [
   { hash: '#/painel', nome: 'Painel', ico: '📦', modulo: 'exp_painel', gerente: true },
   { hash: '#/dia', nome: 'Cronograma do dia', nomeOperador: 'Meu dia', ico: '✅', modulo: 'exp_dia' },
+  { hash: '#/historico', nome: 'Histórico', ico: '📚', modulo: 'exp_historico', gerente: true },
   { hash: '#/cronograma', nome: 'Montar cronograma', ico: '🗓️', modulo: 'exp_cronograma', gerente: true },
   { hash: '#/cadastros', nome: 'Cadastros e acessos', ico: '⚙️', modulo: 'exp_cadastros', gerente: true },
 ];

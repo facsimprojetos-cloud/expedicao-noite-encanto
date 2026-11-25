@@ -10,9 +10,14 @@ App web próprio (HTML + JavaScript puro, sem build) para o cronograma de capaci
 | Painel | gerência | % produtivo do dia por operador × meta, por horário, últimos dias, pendências e pausas (atualiza a cada minuto) |
 | Cronograma do dia / Meu dia | gerência e operador | O operador marca Realizada/Pendente, a quantidade (lotes, peças, fardos) e as pausas. A gerência vê qualquer operador e data |
 | Montar cronograma | gerência | Horários do dia, atividades de cada horário e quais operadores fazem cada uma |
+| Histórico | gerência | Um registro por dia (finalizado ou aberto) com o % e o detalhe de cada operador; exportação CSV |
 | Cadastros e acessos | gerência | Operadores e metas, atividades e tempo padrão, jornada/almoço e quem entra no app |
 
 O operador entra direto no "Meu dia", sem menu.
+
+**Finalizar o dia** (final da tela "Cronograma do dia", gerência): guarda o dia em `noite_encanto.exp_dias` e trava novos lançamentos
+(reabrir pelo mesmo lugar). Se o cronograma foi alterado no dia, pergunta se a alteração vira o novo padrão
+(`exp_cronograma_padrao`) ou se amanhã volta o cronograma anterior. No dia seguinte o formulário vem zerado.
 
 **% produtivo** = tempo padrão produzido (quantidade × tempo padrão, ou o tempo da tarefa fixa realizada) ÷ (minutos dos horários trabalhados − pausas).
 

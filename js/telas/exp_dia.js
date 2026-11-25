@@ -1,7 +1,7 @@
 // Expedição — cronograma do dia: o operador marca o que fez, a quantidade e as pausas.
 // A gerência usa a mesma tela para ver (e corrigir) o dia de qualquer operador e de outras datas.
 import { db, ctx } from '../app.js';
-import { h, num, toast, rpc, msgErro, data as fData } from '../util.js';
+import { h, num, toast, rpc, msgErro, modal, data as fData, dataHora } from '../util.js';
 import { MOTIVOS, hojeSP, mapa, padrao, calcDia, carregando, caixaErro } from '../exp.js';
 
 export async function render(el, _preset, ativa) {
@@ -37,7 +37,8 @@ export async function render(el, _preset, ativa) {
     const C = calcDia(dia, opSel);
     const porItem = Object.fromEntries(C.L.filter(l => l.item_id).map(l => [l.item_id, l]));
     const blocos = cfg.horarios.map(H => ({ H, itens: H.itens.filter(i => i.operadores.includes(opSel) && M.atv[i.atividade_id]) })).filter(b => b.itens.length);
-    const editar = ger || dataSel === cfg.hoje;
+    const fin = dia.finalizado;
+    const editar = !fin && (ger || dataSel === cfg.hoje);
     const ativos = cfg.operadores.filter(o => o.ativo);
 
     res.innerHTML = `
@@ -47,7 +48,8 @@ export async function render(el, _preset, ativa) {
         <div class="exp-resumo"><span class="muted peq">${dataSel === cfg.hoje ? 'Produtividade hoje' : 'Produtividade em ' + h(fData(dataSel))}</span>
           <span class="exp-big">${C.pct}%</span><span class="muted peq">meta ${op.meta_pct}%</span></div>
       </div>
-      ${editar ? '' : '<div class="aviso-box">Dias anteriores só podem ser alterados pela gerência.</div>'}
+      ${fin ? `<div class="ok-box"><b>Dia finalizado</b> por ${h(fin.por || '')} em ${h(dataHora(fin.em))}. Os lançamentos estão guardados no histórico${ger ? ' — para corrigir, reabra o dia no final da tela' : ''}.</div>`
+            : editar ? '' : '<div class="aviso-box">Dias anteriores só podem ser alterados pela gerência.</div>'}
       ${blocos.length ? '' : '<div class="card vazio">Nenhuma atividade atribuída a este operador. A gerência marca as atividades em “Montar cronograma”.</div>'}
       ${blocos.map(({ H, itens }) => {
         const b = C.porHora[H.hora], P = C.P.filter(p => p.horario_id === H.id);
@@ -67,7 +69,55 @@ export async function render(el, _preset, ativa) {
               ${editar ? `<button class="btn peq" data-ap="${H.id}">+ Pausa / intercorrência</button>` : ''}
             </div>
           </div></section>`;
-      }).join('')}`;
+      }).join('')}
+      ${ger ? rodape(fin) : ''}`;
+  }
+
+  function rodape(fin) {
+    if (fin) return `<div class="card exp-fim"><div><h2>Dia finalizado</h2>
+      <p class="muted peq">${fin.alteracao === 'mantida' ? 'As alterações do cronograma foram mantidas como novo padrão.' : fin.alteracao === 'desfeita' ? 'As alterações do cronograma foram desfeitas; voltou o cronograma padrão.' : 'O cronograma não tinha alterações.'}</p></div>
+      <button class="btn" id="exp-reabrir">Reabrir o dia</button></div>`;
+    if (dataSel > cfg.hoje) return '';
+    return `<div class="card exp-fim"><div><h2>Finalizar o dia</h2>
+      <p class="muted peq">Guarda tudo o que foi lançado em ${h(fData(dataSel))} no histórico e trava o dia. No dia seguinte o formulário volta zerado para os operadores.
+      ${cfg.padrao_alterado && dataSel === cfg.hoje ? '<br><b class="txt-erro">O cronograma foi alterado hoje</b> — ao finalizar você escolhe se a alteração continua nos próximos dias.' : ''}</p></div>
+      <button class="btn pri" id="exp-finalizar">Finalizar o dia</button></div>`;
+  }
+
+  function finalizar() {
+    const M = mapa(cfg), ops = cfg.operadores.filter(o => o.ativo || dia.lancamentos.some(l => l.operador_id === o.id));
+    const perguntar = cfg.padrao_alterado && dataSel === cfg.hoje;
+    const linhas = ops.map(o => {
+      const c = calcDia(dia, o.id);
+      const previstas = cfg.horarios.reduce((n, H) => n + H.itens.filter(i => i.operadores.includes(o.id) && M.atv[i.atividade_id]).length, 0);
+      const sem = Math.max(0, previstas - c.ok - c.pend);
+      return `<tr><td>${h(o.nome)}</td><td class="n"><b>${c.pct}%</b></td><td class="n">${c.ok}</td><td class="n">${c.pend}</td><td class="n">${sem}</td><td class="n">${c.pausaMin} min</td></tr>`;
+    }).join('');
+    const fechar = modal({ titulo: `Finalizar o dia ${fData(dataSel)}`, corpo: `
+      <form id="f-fin" class="grade">
+        <div class="tabela-wrap"><table><thead><tr><th>Operador</th><th class="n">Produtivo</th><th class="n">Realizadas</th><th class="n">Pendentes</th><th class="n">Sem registro</th><th class="n">Pausas</th></tr></thead>
+          <tbody>${linhas}</tbody></table></div>
+        ${perguntar ? `<div class="aviso-box"><b>O cronograma foi alterado hoje.</b> Como fica amanhã?</div>
+          <label class="exp-opcao"><input type="radio" name="manter" value="1" required> <span><b>Manter a alteração</b><br><small class="muted">O cronograma de hoje passa a ser o padrão dos próximos dias.</small></span></label>
+          <label class="exp-opcao"><input type="radio" name="manter" value="0" required> <span><b>Voltar ao cronograma anterior</b><br><small class="muted">A alteração valeu só para hoje. Amanhã volta o cronograma padrão.</small></span></label>` : ''}
+        <p class="muted peq">Depois de finalizado, ninguém lança mais neste dia. Se precisar corrigir algo, use “Reabrir o dia”.</p>
+        <div class="acoes" style="justify-content:flex-end"><button type="button" class="btn" data-cancelar>Cancelar</button><button class="btn pri">Finalizar o dia</button></div>
+      </form>`, largo: true });
+    const f = document.getElementById('f-fin');
+    f.querySelector('[data-cancelar]').onclick = fechar;
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const bt = f.querySelector('.pri'); bt.disabled = true;
+      const manter = perguntar ? f.manter.value === '1' : null;
+      try {
+        await fila;
+        const r = await rpc(db, 'noite_encanto_exp_finalizar_dia', { p_data: dataSel, p_manter_alteracao: manter });
+        fechar();
+        toast(r.alteracao === 'mantida' ? 'Dia finalizado. A alteração do cronograma virou o novo padrão.'
+          : r.alteracao === 'desfeita' ? 'Dia finalizado. Amanhã volta o cronograma padrão.' : 'Dia finalizado e guardado no histórico.', 'ok');
+        await carregar();
+      } catch (err) { toast(msgErro(err), 'erro'); bt.disabled = false; }
+    };
   }
 
   function tarefa(it, a, l, editar) {
@@ -106,6 +156,14 @@ export async function render(el, _preset, ativa) {
   res.addEventListener('click', async (e) => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
     const d = b.dataset;
+    if (b.id === 'exp-finalizar') return finalizar();
+    if (b.id === 'exp-reabrir') {
+      if (b.dataset.conf !== '1') { b.dataset.conf = '1'; b.textContent = 'Confirmar: reabrir o dia'; b.classList.add('perigo'); return; }
+      b.disabled = true;
+      try { await rpc(db, 'noite_encanto_exp_reabrir_dia', { p_data: dataSel }); toast('Dia reaberto. Os lançamentos podem ser corrigidos.', 'ok'); await carregar(); }
+      catch (err) { toast(msgErro(err), 'erro'); b.disabled = false; }
+      return;
+    }
     if (d.op) { opSel = +d.op; pausaAberta = null; desenhar(); }
     else if (d.q) {
       const it = +d.it, l = dia.lancamentos.find(x => x.item_id === it && x.operador_id === opSel);

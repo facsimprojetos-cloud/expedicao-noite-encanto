@@ -310,3 +310,12 @@ body.so-operador .topo-mobile{display:flex;align-items:center;gap:12px;position:
 body.so-operador .topo-mobile .t{font-weight:800;letter-spacing:.05em}
 body.so-operador .conteudo{max-width:1100px;margin:auto}
 body.so-operador .exp-opbar{top:48px}
+/* Finalizar o dia / histórico */
+.exp-fim{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-top:18px;border-left:6px solid var(--acento)}
+.exp-fim h2{margin:0 0 4px}.exp-fim p{margin:0;max-width:640px}
+.exp-alerta{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--alerta-bg);border-color:#fcd34d}
+.exp-alerta .peq{display:block;margin-top:2px}
+.exp-opcao{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--linha);border-radius:9px;padding:10px 12px;cursor:pointer}
+.exp-opcao:has(input:checked){border-color:var(--acento);background:var(--acento-2)}
+.exp-opcao input{margin-top:4px;width:18px;height:18px}
+.exp-hist tbody tr{cursor:pointer}

@@ -23,7 +23,7 @@ export async function render(el, _preset, ativa) {
       [cfg, dia, hist] = await Promise.all([
         rpc(db, 'noite_encanto_exp_config'),
         rpc(db, 'noite_encanto_exp_dia', { p_data: dataSel }),
-        rpc(db, 'noite_encanto_exp_resumo', { p_de: somaDias(dataSel, -20), p_ate: dataSel })]);
+        rpc(db, 'noite_encanto_exp_historico', { p_de: somaDias(dataSel, -20), p_ate: dataSel })]);
     } catch (e) { if (ativa()) res.innerHTML = caixaErro(msgErro(e)); return; }
     if (!ativa()) return;
     desenhar(cfg, dia, hist);
@@ -31,7 +31,9 @@ export async function render(el, _preset, ativa) {
     if (dataSel === cfg.hoje) timer = setTimeout(() => { if (ativa() && !document.hidden) carregar(); }, 60000);
   }
 
-  function desenhar(cfg, dia, hist) {
+  function desenhar(cfg, dia, dias0) {
+    const hist = dias0.flatMap(d => d.operadores);
+    const naoFin = dias0.filter(d => !d.finalizado_em && d.data < cfg.hoje).map(d => d.data);
     const M = mapa(cfg);
     const ops = cfg.operadores.filter(o => o.ativo || dia.lancamentos.some(l => l.operador_id === o.id));
     if (!ops.length) { res.innerHTML = '<div class="card vazio">Nenhum operador cadastrado.</div>'; return; }
@@ -60,6 +62,8 @@ export async function render(el, _preset, ativa) {
     const legenda = `<div class="legenda">${ops.map(o => `<span><i style="background:${cor(o)}"></i>${h(o.nome)}</span>`).join('')}<span><i style="background:var(--erro);width:3px"></i>meta ${metaMed}%</span></div>`;
 
     res.innerHTML = `
+      ${naoFin.length ? `<div class="aviso-box">Dias ainda não finalizados: ${naoFin.map(d => h(fData(d))).join(', ')}. Veja em <a href="#/historico">Histórico</a>.</div>` : ''}
+      ${dia.finalizado ? `<div class="ok-box">Dia finalizado por ${h(dia.finalizado.por || '')}.</div>` : ''}
       <h2 class="exp-titulo">${titulo}</h2>
       <div class="exp-cards">${ops.map(o => {
         const c = C[o.id], q = Object.entries(quantidades(c.L, M.atv));

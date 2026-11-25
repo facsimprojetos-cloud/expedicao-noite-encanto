@@ -23,6 +23,11 @@ export async function render(el, _preset, ativa) {
     const atvs = cfg.atividades.filter(a => a.ativo);
     const opcoes = atvs.map(a => `<option value="${a.id}">${h(a.nome)}</option>`).join('');
     res.innerHTML = `
+      ${cfg.padrao_alterado ? `<div class="card exp-alerta"><div><b>O cronograma está diferente do padrão.</b>
+          <span class="peq">Ao finalizar o dia, você escolhe se a alteração continua nos próximos dias. Se quiser, já decida agora:</span></div>
+        <div class="acoes"><button class="btn pri" data-padrao="salvar">Salvar como novo padrão</button>
+          <button class="btn perigo" data-padrao="desfazer">${confirmar === 'desfazer' ? 'Confirmar: voltar ao padrão' : 'Desfazer alterações'}</button></div></div>`
+        : '<p class="ok-box peq" style="margin-top:0">Este é o cronograma padrão: é ele que aparece todo dia para os operadores.</p>'}
       <p class="muted peq">Toque no nome do operador para colocar ou tirar ele da atividade. Para mudar um horário, edite a hora e saia do campo.</p>
       ${cfg.horarios.map(H => `<section class="exp-blk">
         <div class="exp-tm"><input class="inp exp-hora" data-hora="${H.id}" value="${h(H.hora)}" inputmode="numeric" maxlength="5" aria-label="Horário">
@@ -53,11 +58,19 @@ export async function render(el, _preset, ativa) {
   res.addEventListener('click', async (e) => {
     const b = e.target.closest('button'); if (!b) return;
     const d = b.dataset;
+    if (d.padrao === 'salvar') {
+      b.disabled = true; await acao('noite_encanto_exp_padrao_salvar', {}, 'Pronto: este é o novo cronograma padrão.'); return;
+    }
+    if (d.padrao === 'desfazer') {
+      if (confirmar !== 'desfazer') { confirmar = 'desfazer'; desenhar(); return; }
+      confirmar = null; b.disabled = true;
+      await acao('noite_encanto_exp_padrao_restaurar', {}, 'Cronograma voltou ao padrão.'); return;
+    }
     if (d.tg) {
       const it = cfg.horarios.flatMap(x => x.itens).find(x => x.id === +d.tg), marcar = !it.operadores.includes(+d.op);
       it.operadores = marcar ? [...it.operadores, +d.op] : it.operadores.filter(x => x !== +d.op);
       desenhar();
-      try { await rpc(db, 'noite_encanto_exp_item_operador', { p_item: +d.tg, p_operador: +d.op, p_marcar: marcar }); }
+      try { await rpc(db, 'noite_encanto_exp_item_operador', { p_item: +d.tg, p_operador: +d.op, p_marcar: marcar }); carregar(); }
       catch (err) { toast(msgErro(err), 'erro'); carregar(); }
     } else if (d.ri) {
       b.disabled = true; await acao('noite_encanto_exp_item_excluir', { p_id: +d.ri }, 'Atividade tirada do horário.');
