@@ -108,6 +108,7 @@ function telaLogin(msg = '', tipo = 'erro') {
         <button class="btn" type="button" id="criar">Criar conta</button>
         <button class="btn peq" type="button" id="esqueci" style="border:0">Esqueci minha senha</button>
       </form>
+      <p class="muted peq" style="text-align:center;margin:12px 0 0"><b>Primeiro acesso?</b> Digite o e-mail liberado pela gerência, crie uma senha e toque em <b>Criar conta</b>. Depois confirme pelo link que chega no seu e-mail.</p>
     </div></div>`;
   const f = document.getElementById('f-login');
   const dados = () => Object.fromEntries(new FormData(f));
@@ -133,7 +134,7 @@ function telaLogin(msg = '', tipo = 'erro') {
 }
 
 function traduzErroAuth(m) {
-  if (/Invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos.';
+  if (/Invalid login credentials/i.test(m)) return 'E-mail ou senha incorretos. Se é o seu primeiro acesso, você precisa primeiro tocar em "Criar conta" com o e-mail liberado pela gerência.';
   if (/Email not confirmed/i.test(m)) return 'Confirme seu e-mail pelo link recebido antes de entrar.';
   if (/already registered/i.test(m)) return 'Este e-mail já tem conta. Use "Entrar".';
   if (/Password should be/i.test(m)) return 'A senha precisa ter pelo menos 6 caracteres.';
